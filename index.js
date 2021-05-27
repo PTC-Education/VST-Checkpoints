@@ -5,7 +5,7 @@ var api = require('./onshapeAPI/checkpointFunction.js');
 var settings = server.loadHardwareInterface(__dirname);
 
 var TOOL_NAME = "checkpoint"; // This is what is made on the webserver for the image target
-let objectName = "checkpointNode"; // This is the name of the folder in spatialToolbox in Documents 
+let objectName = "checkpointNode";
 
 exports.enabled = settings('enabled');
 exports.configurable = true;
@@ -29,7 +29,7 @@ if (exports.enabled){
                 value: settings('checkpointName', objectName),
                 type: 'text',
                 default: objectName,
-                disabled: true,
+                disabled: false,
                 helpText: 'The name of the object that connects to this hardware interface.'
             },
             // documentId
@@ -38,37 +38,39 @@ if (exports.enabled){
                 type: 'text',
                 default: 'url',
                 disabled: false,
-                helpText: 'The URL of the Onshape model to insert checkpoints into.'
+                helpText: 'The URL of the Onshape assembly to insert checkpoints into.'
             },
-            // Onshape origin offset in X
+            // VST origin offset in X
             checkpointRobotOffsetX: {
-                value: settings('checkpointOnshapeOffsetX', 0),
+                value: settings('checkpointRobotOffsetX', 0),
                 type: 'number',
                 default: 0,
                 disabled: false,
                 helpText: 'The X axis offset from the image target to base of the robot.'
             },
-            // Onshape origin offset in Y
+            // VST origin offset in Y
             checkpointRobotOffsetY: {
-                value: settings('checkpointOnshapeOffsetY', 0),
+                value: settings('checkpointRobotOffsetY', 0),
                 type: 'number',
                 default: 0,
                 disabled: false,
                 helpText: 'The Y axis offset from the image target to base of the robot.'
             },
+            // VST origin offset in Y
             checkpointRobotOffsetZ: {
-                value: settings('checkpointOnshapeOffsetZ', 0),
+                value: settings('checkpointRobotOffsetZ', 0),
                 type: 'number',
                 default: 0,
                 disabled: false,
                 helpText: 'The Z axis offset from the image target to base of the robot.'
             },
+            // Onshape origin offset in X
             checkpointOnshapeOffsetX: {
                 value: settings('checkpointOnshapeOffsetX', 0),
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The X axis offset from the Onshape origin.'
+                helpText: 'The X axis offset from the Onshape origin in millimeters.'
             },
             // Onshape origin offset in Y
             checkpointOnshapeOffsetY: {
@@ -76,14 +78,15 @@ if (exports.enabled){
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The Y axis offset from the Onshape origin.'
+                helpText: 'The Y axis offset from the Onshape origin in millimeters.'
             },
+            // Onshape origin offset in Z
             checkpointOnshapeOffsetZ: {
                 value: settings('checkpointOnshapeOffsetZ', 0),
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The Z axis offset from the Onshape origin.'
+                helpText: 'The Z axis offset from the Onshape origin in millimeters.'
             }
         };
     }
@@ -91,7 +94,7 @@ if (exports.enabled){
     // Get the settings that the user defined on localhost:8080
     objectName = exports.settings.checkpointName.value;
     console.log("checkpoint: " + objectName)
-    onshapeUrl = exports.settings.checkpointOnshapeUrl.value; //parse
+    onshapeUrl = exports.settings.checkpointOnshapeUrl.value;
     robotOffsetX = exports.settings.checkpointRobotOffsetX.value;
     robotOffsetY = exports.settings.checkpointRobotOffsetY.value;
     robotOffsetZ = exports.settings.checkpointRobotOffsetZ.value;
@@ -158,8 +161,10 @@ function startHardwareInterface() {
 
         inMotion = false;
         activeCheckpointName = null;
-
     });
+
+    let offsets = [-robotOffsetX, -robotOffsetY, robotOffsetZ];
+    server.writePublicData("checkpoint", "kineticAR", "kineticNode1", "offset", offsets)
 
     server.addPublicDataListener("checkpoint", "kineticAR", "kineticNode2","pathData",function (data){
         data.forEach(framePath => {             // We go through array of paths
@@ -198,9 +203,9 @@ function startHardwareInterface() {
                                 ], true);
                                 server.pushUpdatesToDevices("checkpoint");
 
-                                onshapeX = onshapeOffsetX + frameCheckpoint.posXUR/1000;
-                                onshapeY = onshapeOffsetY - frameCheckpoint.posYUR/1000;
-                                onshapeZ = onshapeOffsetZ + frameCheckpoint.posZUR/1000;
+                                onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
+                                onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
+                                onshapeZ = (onshapeOffsetZ + frameCheckpoint.posZUR)/1000;
 
                                 console.log("checkpoint num: " + serverCheckpoint.name.substring(13,14));
                                 checkNum = serverCheckpoint.name.substring(13,14);

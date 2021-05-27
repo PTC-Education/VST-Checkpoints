@@ -21,6 +21,9 @@ mainUI.on('clearPath', clearPath);
 mainUI.on('closePath', closePathCallback);
 mainUI.on('closeAction', closeActionCallback);
 
+let offsets = new THREE.Vector3(0,0,0);
+let madeOffsets = false;
+
 function closeActionCallback(){
     kineticARView.activateCheckpointMode(0);
     mainUI.hideCloseActionButton();
@@ -142,6 +145,11 @@ realityInterface.onRealityInterfaceLoaded(function() {
     // Position robot/occlusion dummy
     realityInterface.addReadPublicDataListener("kineticNode1", "ARposition", function (data){
         //if (kineticARView !== undefined) kineticARView.moveDummyRobot(data);
+    });
+
+    realityInterface.addReadPublicDataListener("kineticNode1", "offset", function (data){
+        offsets.set(data[0], data[1], data[2]);
+        madeOffsets = false;
     });
 
     realityInterface.addReadPublicDataListener("kineticNode2", "pathData", function (data) {
@@ -275,6 +283,10 @@ function update(deltaTime, elapsedTime, frameCount) {
         path.checkpointsLookAt(kineticARView.camera.position);                // Make all checkpoints look at camera
         path.update(deltaTime, elapsedTime, frameCount);
     });
+
+    if (!madeOffsets) {
+        madeOffsets = kineticARView.setOffsets(offsets);
+    }
 
     // TODO: this should be a trigger. Not happening at every frame
     // Checkpoint Menu selection

@@ -270,9 +270,22 @@ export class KineticARView extends EventEmitter{
         THREE.SceneUtils.attach( this.dummy_anchor, this.scene, this.groundPlaneContainerObj ); // This will remove robot dummy from scene and anchor to ground plane
 
         // Move the dummy_anchor to the robot base according to where the image target is in relation
+        // this.dummy_anchor.translateX(200);
+        // this.dummy_anchor.translateY(375);
         this.dummy_anchor.matrixAutoUpdate = true;
         this.dummy_anchor.updateMatrix();
 
+    }
+
+    setOffsets(offsets){
+        if (this.dummy_anchor != null){
+            this.dummy_anchor.translateX(offsets.x);
+            this.dummy_anchor.translateY(offsets.y);
+            this.dummy_anchor.translateZ(offsets.z);
+            this.dummy_anchor.updateMatrix();
+            return true;
+        }
+        return false;
     }
 
     /*
