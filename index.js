@@ -246,9 +246,9 @@ function startHardwareInterface() {
 
                             });
 
-                            onshapeX = onshapeOffsetX + frameCheckpoint.posXUR/1000;
-                            onshapeY = onshapeOffsetY - frameCheckpoint.posYUR/1000;
-                            onshapeZ = onshapeOffsetZ + frameCheckpoint.posZUR/1000;
+                            onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
+                            onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
+                            onshapeZ = (onshapeOffsetZ + frameCheckpoint.posZUR)/1000;
 
                             api.makeCheckpoint([onshapeX, onshapeY, onshapeZ], function(data){
                                 console.log(data);
