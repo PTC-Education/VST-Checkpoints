@@ -269,9 +269,6 @@ export class KineticARView extends EventEmitter{
 
         THREE.SceneUtils.attach( this.dummy_anchor, this.scene, this.groundPlaneContainerObj ); // This will remove robot dummy from scene and anchor to ground plane
 
-        // Move the dummy_anchor to the robot base according to where the image target is in relation
-        // this.dummy_anchor.translateX(200);
-        // this.dummy_anchor.translateY(375);
         this.dummy_anchor.matrixAutoUpdate = true;
         this.dummy_anchor.updateMatrix();
 
@@ -286,6 +283,30 @@ export class KineticARView extends EventEmitter{
             return true;
         }
         return false;
+    }
+
+    updateCheckpointPosition(position, i, cb){
+        let posUR = new THREE.Vector3(position[i][0], position[i][1], position[i][2]);
+        let currPos = new THREE.Vector3();
+        let currPosGP = new THREE.Vector3();
+        currPos.copy(this.currentPath.checkpoints[i].getWorldPosition());
+        currPosGP.copy(currPos);
+        this.currentPath.URorigin.worldToLocal(currPos);
+        this.groundPlaneContainerObj.worldToLocal(currPosGP);
+        let newHeight = (posUR.z - currPos.z)/2 + currPosGP.y;
+        this.currentPath.checkpoints[i].editHeight(newHeight);
+        this.currentPath.URorigin.localToWorld(posUR);
+        this.groundPlaneContainerObj.worldToLocal(posUR);
+        this.currentPath.checkpoints[i].editPosition(posUR);
+        this.currentPath.selectedCheckpoint = this.currentPath.checkpoints[i];
+        this.currentPath.checkpoints[i].update();
+        if (this.currentPath.checkpoints.length > 1){
+            this.currentPath.updateSpline();
+            this.currentPath.updateFloorSpline();
+        }
+        this.currentPath.updateHeightLinesAndFloorMarks();
+        this.currentPath.updatePathData();
+        cb(true);
     }
 
     /*

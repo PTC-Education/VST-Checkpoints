@@ -4,8 +4,8 @@ var server = require('@libraries/hardwareInterfaces');
 var api = require('./onshapeAPI/checkpointFunction.js');
 var settings = server.loadHardwareInterface(__dirname);
 
-var TOOL_NAME = "checkpoint"; // This is what is made on the webserver for the image target
-let objectName = "checkpointNode";
+var TOOL_NAME = "kineticAR"; // This is what is made on the webserver for the image target
+let objectName = "checkpoint";
 
 exports.enabled = settings('enabled');
 exports.configurable = true;
@@ -14,6 +14,7 @@ let inMotion = false;                   // When robot is moving
 let pathData = [];                      // List of paths with checkpoints
 let activeCheckpointName = null;        // Current active checkpoint
 var onshapeX, onshapeY;
+let getting = 0;
 
 if (exports.enabled){
     // Code executed when your robotic addon is enabled
@@ -46,7 +47,7 @@ if (exports.enabled){
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The X axis offset from the image target to base of the robot.'
+                helpText: 'The X axis offset from the image target to base of the robot in millimeters.'
             },
             // VST origin offset in Y
             checkpointRobotOffsetY: {
@@ -54,7 +55,7 @@ if (exports.enabled){
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The Y axis offset from the image target to base of the robot.'
+                helpText: 'The Y axis offset from the image target to base of the robot in millimeters.'
             },
             // VST origin offset in Y
             checkpointRobotOffsetZ: {
@@ -62,7 +63,7 @@ if (exports.enabled){
                 type: 'number',
                 default: 0,
                 disabled: false,
-                helpText: 'The Z axis offset from the image target to base of the robot.'
+                helpText: 'The Z axis offset from the image target to base of the robot in millimeters.'
             },
             // Onshape origin offset in X
             checkpointOnshapeOffsetX: {
@@ -138,35 +139,54 @@ function startHardwareInterface() {
     server.setTool('checkpoint', 'kineticAR', 'motion', __dirname);
     server.removeAllNodes('checkpoint', 'kineticAR');
 
-    server.addNode("checkpoint", "kineticAR", "kineticNode1", "storeData");     // Node for checkpoint stop feedback
-    server.addNode("checkpoint", "kineticAR", "kineticNode2", "storeData");     // Node for the data path. Follow Checkpoints
-    server.addNode("checkpoint", "kineticAR", "kineticNode4", "storeData");     // Node for cleaning the path
+    server.addNode(objectName, TOOL_NAME, "getOnshape", "node", {x: 0, y: 0, scale: 1});
+    server.addNode(objectName, TOOL_NAME, "kineticNode1", "storeData");     // Node for checkpoint stop feedback
+    server.addNode(objectName, TOOL_NAME, "kineticNode2", "storeData");     // Node for the data path. Follow Checkpoints
+    server.addNode(objectName, TOOL_NAME, "kineticNode4", "storeData");     // Node for cleaning the path
 
-    server.addPublicDataListener("checkpoint", "kineticAR", "kineticNode4","ClearPath",function (data) {
+    server.addReadListener(objectName, TOOL_NAME, "getOnshape", function(data){
+        if (data.value == 1) {
+            getting = 1;
+            api.getCheckpointPositions(function(data){
+                console.log("from onshape: " + data);
+                for (let i = 0; i < data.length; i++){
+                    data[i][0] = data[i][0] * 1000 - onshapeOffsetX; //Remove offsets
+                    data[i][1] = onshapeOffsetY - data[i][1] * 1000; //And set back to posUR
+                    data[i][2] = data[i][2] * 1000 - onshapeOffsetZ;
+                }
+                console.log("posUR: " + data);
+                server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "onshapePositions", data);
+            });
+        }
+        else {
+            getting = 0;
+        }
+    });
+
+    server.addPublicDataListener(objectName, TOOL_NAME, "kineticNode4","ClearPath",function (data) {
 
         console.log("checkpoint:    -   -   -   Frame has requested to clear path: ", data);
 
         pathData.forEach(path => {
             path.checkpoints.forEach(checkpoint => {
-                server.removeNode("checkpoint", "kineticAR", checkpoint.name);
+                server.removeNode(objectName, TOOL_NAME, checkpoint.name);
                 api.deleteCheckpoints(function(data){
-                    console.log(data);
                 });
             });
             path.checkpoints = [];
         });
         pathData = [];
 
-        server.pushUpdatesToDevices("checkpoint");
+        server.pushUpdatesToDevices(objectName);
 
         inMotion = false;
         activeCheckpointName = null;
     });
 
     let offsets = [-robotOffsetX, -robotOffsetY, robotOffsetZ];
-    server.writePublicData("checkpoint", "kineticAR", "kineticNode1", "offset", offsets)
+    server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "offset", offsets)
 
-    server.addPublicDataListener("checkpoint", "kineticAR", "kineticNode2","pathData",function (data){
+    server.addPublicDataListener(objectName, TOOL_NAME, "kineticNode2","pathData",function (data){
         data.forEach(framePath => {             // We go through array of paths
 
             let pathExists = false;
@@ -195,13 +215,13 @@ function startHardwareInterface() {
                                 if (serverCheckpoint.orientation !== frameCheckpoint.orientation) serverCheckpoint.orientation = frameCheckpoint.orientation;
 
                                 // <node>, <frame>, <Node>, x, y, scale, matrix
-                                server.moveNode("checkpoint", "kineticAR", frameCheckpoint.name, frameCheckpoint.posX, frameCheckpoint.posZ, 0.3,[
+                                server.moveNode(objectName, TOOL_NAME, frameCheckpoint.name, frameCheckpoint.posX, frameCheckpoint.posZ, 0.3,[
                                     1, 0, 0, 0,
                                     0, 1, 0, 0,
                                     0, 0, 1, 0,
                                     0, 0, frameCheckpoint.posY * 3, 1
                                 ], true);
-                                server.pushUpdatesToDevices("checkpoint");
+                                server.pushUpdatesToDevices(objectName);
 
                                 onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
                                 onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
@@ -210,9 +230,10 @@ function startHardwareInterface() {
                                 console.log("checkpoint num: " + serverCheckpoint.name.substring(13,14));
                                 checkNum = serverCheckpoint.name.substring(13,14);
 
-                                api.updateCheckpoint(checkNum, [onshapeX, onshapeY, onshapeZ], function(data){
-                                    console.log(data);
-                                });
+                                if (!getting){
+                                    api.updateCheckpoint(checkNum, [onshapeX, onshapeY, onshapeZ], function(data){
+                                    });
+                                }  
                             }
                         });
 
@@ -220,24 +241,24 @@ function startHardwareInterface() {
                         if (!exists){
                             serverPath.checkpoints.push(frameCheckpoint);
 
-                            server.addNode("checkpoint", "kineticAR", frameCheckpoint.name, "node");
+                            server.addNode(objectName, TOOL_NAME, frameCheckpoint.name, "node");
 
                             console.log('checkpoint: NEW ' + frameCheckpoint.name + ' | position: ', frameCheckpoint.posX, frameCheckpoint.posY, frameCheckpoint.posZ);
 
                             // <node>, <frame>, <Node>, x, y, scale, matrix
-                            server.moveNode("checkpoint", "kineticAR", frameCheckpoint.name, frameCheckpoint.posX, frameCheckpoint.posZ, 0.3,[
+                            server.moveNode(objectName, TOOL_NAME, frameCheckpoint.name, frameCheckpoint.posX, frameCheckpoint.posZ, 0.3,[
                                 1, 0, 0, 0,
                                 0, 1, 0, 0,
                                 0, 0, 1, 0,
                                 0, 0, frameCheckpoint.posY * 3, 1
                             ], true);
 
-                            server.pushUpdatesToDevices("checkpoint");
+                            server.pushUpdatesToDevices(objectName);
 
                             console.log('checkpoint: ************** Add read listener to ', frameCheckpoint.name);
 
                             // Add listener to node
-                            server.addReadListener("checkpoint", "kineticAR", frameCheckpoint.name, function(data){
+                            server.addReadListener(objectName, TOOL_NAME, frameCheckpoint.name, function(data){
 
                                 let indexValues = frameCheckpoint.name.split("_")[1];
                                 let pathIdx = parseInt(indexValues.split(":")[0]);
@@ -246,12 +267,11 @@ function startHardwareInterface() {
 
                             });
 
-                            onshapeX = onshapeOffsetX + frameCheckpoint.posXUR/1000;
-                            onshapeY = onshapeOffsetY - frameCheckpoint.posYUR/1000;
-                            onshapeZ = onshapeOffsetZ + frameCheckpoint.posZUR/1000;
+                            onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
+                            onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
+                            onshapeZ = (onshapeOffsetZ + frameCheckpoint.posZUR)/1000;
 
                             api.makeCheckpoint([onshapeX, onshapeY, onshapeZ], function(data){
-                                console.log(data);
                             });
                         }
                     });
@@ -290,9 +310,9 @@ function nodeReadCallback(data, checkpointIdx, pathIdx){
             checkpointTriggered.active = 1; // This checkpoint gets activated
 
             inMotion = false
-            server.write("checkpoint", "kineticAR", activeCheckpointName, 0)
+            server.write(objectName, TOOL_NAME, activeCheckpointName, 0)
             
-            server.writePublicData("checkpoint", "kineticAR", "kineticNode1", "CheckpointTriggered", checkpointIdx);          // Alert frame of new checkpoint goal
+            server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "CheckpointTriggered", checkpointIdx);          // Alert frame of new checkpoint goal
 
         } else {
             console.log('checkpoint: WARNING - This checkpoint was already active!');
@@ -320,7 +340,7 @@ function nodeReadCallback(data, checkpointIdx, pathIdx){
                 console.log('Checkpoint reached: ', checkpointTriggered.name);
                 checkpointTriggered.active = 0; // This checkpoint gets deactivated
 
-                server.writePublicData("checkpoint", "kineticAR", "kineticNode1", "CheckpointStopped", checkpointIdx);
+                server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "CheckpointStopped", checkpointIdx);
 
                 let nextCheckpointToTrigger = null;
 
@@ -328,7 +348,7 @@ function nodeReadCallback(data, checkpointIdx, pathIdx){
                     nextCheckpointToTrigger = pathData[pathIdx].checkpoints[checkpointIdx + 1];
 
                     console.log('Next checkpoint triggered: ', nextCheckpointToTrigger.name);
-                    server.write("checkpoint", "kineticAR", nextCheckpointToTrigger.name, 1);
+                    server.write(objectName, TOOL_NAME, nextCheckpointToTrigger.name, 1);
 
                 } else {                                                                            // We reached end of path
 

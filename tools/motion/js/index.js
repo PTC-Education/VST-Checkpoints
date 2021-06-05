@@ -147,14 +147,25 @@ realityInterface.onRealityInterfaceLoaded(function() {
         //if (kineticARView !== undefined) kineticARView.moveDummyRobot(data);
     });
 
+    realityInterface.addReadPublicDataListener("kineticNode2", "pathData", function (data) {
+
+        if (kineticARView !== undefined) kineticARView.updateDevices(data);
+    });
+    
     realityInterface.addReadPublicDataListener("kineticNode1", "offset", function (data){
         offsets.set(data[0], data[1], data[2]);
         madeOffsets = false;
     });
 
-    realityInterface.addReadPublicDataListener("kineticNode2", "pathData", function (data) {
-
-        if (kineticARView !== undefined) kineticARView.updateDevices(data);
+    realityInterface.addReadPublicDataListener("kineticNode1", "onshapePositions", function (data){
+        for (let i = 0; i < data.length; i++){
+            kineticARView.updateCheckpointPosition(data, i, function(push){
+                if (push){
+                    pushPathsDataToServer();
+                }
+            });
+        }       
+        pushPathsDataToServer();
     });
 });
 
