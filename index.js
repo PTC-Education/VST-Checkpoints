@@ -322,6 +322,7 @@ function nodeReadCallback(data, checkpointIdx, pathIdx){
             activeCheckpointName = checkpointTriggered.name;
             checkpointTriggered.active = 1; // This checkpoint gets activated
 
+            //CHECKPOINT POSITION IN X,Y,Z IN MILLIMETERS IS [checkpointTriggered.posXUR, checkpointTriggered.posYUR, checkpointTriggered.posZUR]
             //PLACE INVERSE KINEMATICS HERE AND UNCOMMENT LINE BELOW:
             //inMotion = true
 

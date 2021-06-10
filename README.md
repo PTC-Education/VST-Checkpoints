@@ -8,9 +8,9 @@
 # **Usage**
 
 - This addon is intended to connect Onshape, Vuforia Spatial Toolbox, and a robot through the usage of the motion tool.
-- If you have a robot with inverse kinematics that you wish to use with this interface, please open index.js and see lines 325-330 for more information.
+- If you have a robot with inverse kinematics that you wish to use with this interface, please open index.js and see lines 325-331 for more information.
     - To summarize, on line 325, you will want to add your inverse kinematics and tell index.js that the robot is currently in motion by setting inMotion to true.
-    - You will then want to elsewhere in the index.js file have a function that checks the position of the robot to see if it has reached the position you sent it. Once that happens, you will want to set inMotion to false as well as deactivating the checkpoint by copy and pasting the line on 330 into your function.
+    - You will then want to elsewhere in the index.js file have a function that checks the position of the robot to see if it has reached the position you sent it. Once that happens, you will want to set inMotion to false as well as deactivating the checkpoint by copy and pasting the line on 331 into your function.
     - You may also need other lines of code to initialize a connection between the Vuforia Spatial Edge Server and your robot or retrieve other information.
 - To start the Vuforia Spatial Toolbox server, in Terminal navigate to /vuforia-spatial-edge-server. Once there, run `node server` to start the server.
     - If you've added your own inverse kinematics you may have errors appear at this step that you will have to resolve before proceeding.
