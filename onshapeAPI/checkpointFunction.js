@@ -2,7 +2,7 @@
 var app = require('./lib/app.js');
 var transform = require('./lib/transform.js');
 
-// Onshape UR3e did, wid, eid, mvid
+// Onshape assembly did, wid, eid, mvid
 var did = "c4a311bb3aa38b94a0d9c83e";
 var wid = "deca35608594128b69b0499a";
 var eid = "41517917aefcc32b9d33e45c";
@@ -18,6 +18,7 @@ var checkEids = ["494c89e6e3215f70111cd3c2", "da5e98cd4c5a99b798d4b535", "0d734f
 var checkVid = "9e58b30feb62f9e3f35bc59e";
 maxCheckpoints = checkEids.length;
 
+// Change this to alter the rotation of the checkpoints
 rotation = [1, 0, 0, 0];
 
 // Function that makes a checkpoint and then moves it to toolboxPos
@@ -58,7 +59,7 @@ var updateCheckpoint = function(number, toolboxPos, cb) {
     })
 }
 
-// Function that deletes the checkpoint number
+// Function that deletes all checkpoints
 var deleteCheckpoints = function(cb) {
     sortCheckpoints(function(checkpoints){
         for(i = 0; i < checkpoints.length; i++){

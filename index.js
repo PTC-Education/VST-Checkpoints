@@ -13,6 +13,7 @@ exports.configurable = true;
 let inMotion = false;                   // When robot is moving
 let pathData = [];                      // List of paths with checkpoints
 let activeCheckpointName = null;        // Current active checkpoint
+let onshapeUsed = false;
 var onshapeX, onshapeY;
 let getting = 0;
 
@@ -33,7 +34,7 @@ if (exports.enabled){
                 disabled: false,
                 helpText: 'The name of the object that connects to this hardware interface.'
             },
-            // documentId
+            // Assembly URL
             checkpointOnshapeUrl: {
                 value: settings('checkpointOnshapeUrl', "url"),
                 type: 'text',
@@ -57,7 +58,7 @@ if (exports.enabled){
                 disabled: false,
                 helpText: 'The Y axis offset from the image target to base of the robot in millimeters.'
             },
-            // VST origin offset in Y
+            // VST origin offset in Z
             checkpointRobotOffsetZ: {
                 value: settings('checkpointRobotOffsetZ', 0),
                 type: 'number',
@@ -103,7 +104,9 @@ if (exports.enabled){
     onshapeOffsetY = exports.settings.checkpointOnshapeOffsetY.value;
     onshapeOffsetZ = exports.settings.checkpointOnshapeOffsetZ.value;
 
+    // Parse the onshape URL into did, wid, eid
     if (onshapeUrl != 'url') {
+        onshapeUsed = true;
         onshapeUrl = onshapeUrl.replace(/\n/g,'');
         console.log("checkpoint thinks it is connected to: " + onshapeUrl);
         onshapeUrl_object = onshapeUrl.split('/');
@@ -117,6 +120,7 @@ if (exports.enabled){
             workspaceId = onshapeUrl_object[4]; 
             elementId = onshapeUrl_object[6];
         }
+        // Set these parameters in checkpointFunction.js
         api.setOnshapeParams(documentId, workspaceId, elementId, function(data){
             console.log(data);
         });
@@ -144,20 +148,25 @@ function startHardwareInterface() {
     server.addNode(objectName, TOOL_NAME, "kineticNode2", "storeData");     // Node for the data path. Follow Checkpoints
     server.addNode(objectName, TOOL_NAME, "kineticNode4", "storeData");     // Node for cleaning the path
 
+    // Listen for the node on the image target
     server.addReadListener(objectName, TOOL_NAME, "getOnshape", function(data){
+        // If the node is on, get the onshape positions and write them to the motion tool
         if (data.value == 1) {
             getting = 1;
-            api.getCheckpointPositions(function(data){
-                console.log("from onshape: " + data);
-                for (let i = 0; i < data.length; i++){
-                    data[i][0] = data[i][0] * 1000 - onshapeOffsetX; //Remove offsets
-                    data[i][1] = onshapeOffsetY - data[i][1] * 1000; //And set back to posUR
-                    data[i][2] = data[i][2] * 1000 - onshapeOffsetZ;
-                }
-                console.log("posUR: " + data);
-                server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "onshapePositions", data);
-            });
+            if (onshapeUsed) {
+                api.getCheckpointPositions(function(data){
+                    console.log("from onshape: " + data);
+                    for (let i = 0; i < data.length; i++){
+                        data[i][0] = data[i][0] * 1000 - onshapeOffsetX; //Remove offsets
+                        data[i][1] = onshapeOffsetY - data[i][1] * 1000; //And set back to posUR
+                        data[i][2] = data[i][2] * 1000 - onshapeOffsetZ;
+                    }
+                    console.log("posUR: " + data);
+                    server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "onshapePositions", data);
+                });
+            }
         }
+        // If the node is off, we are not getting onshape position
         else {
             getting = 0;
         }
@@ -170,8 +179,11 @@ function startHardwareInterface() {
         pathData.forEach(path => {
             path.checkpoints.forEach(checkpoint => {
                 server.removeNode(objectName, TOOL_NAME, checkpoint.name);
-                api.deleteCheckpoints(function(data){
-                });
+                // Delete all the checkpoints in Onshape
+                if (onshapeUsed) {
+                    api.deleteCheckpoints(function(data){
+                    });
+                }
             });
             path.checkpoints = [];
         });
@@ -183,6 +195,7 @@ function startHardwareInterface() {
         activeCheckpointName = null;
     });
 
+    // Set the offsets from the origin to the robot base
     let offsets = [-robotOffsetX, -robotOffsetY, robotOffsetZ];
     server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "offset", offsets)
 
@@ -223,14 +236,12 @@ function startHardwareInterface() {
                                 ], true);
                                 server.pushUpdatesToDevices(objectName);
 
+                                // Get the positions for the checkpoint in posUR and update in Onshape
                                 onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
                                 onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
                                 onshapeZ = (onshapeOffsetZ + frameCheckpoint.posZUR)/1000;
-
-                                console.log("checkpoint num: " + serverCheckpoint.name.substring(13,14));
                                 checkNum = serverCheckpoint.name.substring(13,14);
-
-                                if (!getting){
+                                if (onshapeUsed && !getting){
                                     api.updateCheckpoint(checkNum, [onshapeX, onshapeY, onshapeZ], function(data){
                                     });
                                 }  
@@ -267,12 +278,14 @@ function startHardwareInterface() {
 
                             });
 
+                            // Get the positions in posUR and make a new checkpoint in Onshape at that position
                             onshapeX = (onshapeOffsetX + frameCheckpoint.posXUR)/1000;
                             onshapeY = (onshapeOffsetY - frameCheckpoint.posYUR)/1000;
                             onshapeZ = (onshapeOffsetZ + frameCheckpoint.posZUR)/1000;
-
-                            api.makeCheckpoint([onshapeX, onshapeY, onshapeZ], function(data){
-                            });
+                            if (onshapeUsed) {
+                                api.makeCheckpoint([onshapeX, onshapeY, onshapeZ], function(data){
+                                });
+                            }
                         }
                     });
                 }
@@ -309,8 +322,12 @@ function nodeReadCallback(data, checkpointIdx, pathIdx){
             activeCheckpointName = checkpointTriggered.name;
             checkpointTriggered.active = 1; // This checkpoint gets activated
 
-            inMotion = false
-            server.write(objectName, TOOL_NAME, activeCheckpointName, 0)
+            //PLACE INVERSE KINEMATICS HERE AND UNCOMMENT LINE BELOW:
+            //inMotion = true
+
+            //YOU WILL NEED TO INCLUDE A WAY TO SET inMotion TO FALSE ONCE THE POSITION IS REACHED
+            //IN THAT FUNCTION, INCLUDE THE LINE BELOW TO DEACTIVATE THE CHECKPOINT:
+            //server.write(objectName, TOOL_NAME, activeCheckpointName, 0);
             
             server.writePublicData(objectName, TOOL_NAME, "kineticNode1", "CheckpointTriggered", checkpointIdx);          // Alert frame of new checkpoint goal
 

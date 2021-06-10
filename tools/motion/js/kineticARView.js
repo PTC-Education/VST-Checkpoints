@@ -274,6 +274,7 @@ export class KineticARView extends EventEmitter{
 
     }
 
+    // Set offsets from image target to robot origin in XYZ
     setOffsets(offsets){
         if (this.dummy_anchor != null){
             this.dummy_anchor.translateX(offsets.x);
@@ -285,6 +286,7 @@ export class KineticARView extends EventEmitter{
         return false;
     }
 
+    // Move checkpoint i to position given in posUR coordinates
     updateCheckpointPosition(position, i, cb){
         let posUR = new THREE.Vector3(position[i][0], position[i][1], position[i][2]);
         let currPos = new THREE.Vector3();
@@ -293,7 +295,7 @@ export class KineticARView extends EventEmitter{
         currPosGP.copy(currPos);
         this.currentPath.URorigin.worldToLocal(currPos);
         this.groundPlaneContainerObj.worldToLocal(currPosGP);
-        let newHeight = (posUR.z - currPos.z)/2 + currPosGP.y;
+        let newHeight = (posUR.z - currPos.z)/2 + currPosGP.y; //Doesn't make sense and not entirely accurate
         this.currentPath.checkpoints[i].editHeight(newHeight);
         this.currentPath.URorigin.localToWorld(posUR);
         this.groundPlaneContainerObj.worldToLocal(posUR);
