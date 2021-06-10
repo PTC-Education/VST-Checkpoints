@@ -32,7 +32,7 @@
     - If you do not see a cog wheel, try restarting the server.
 
 <p align="center">
-<img src="Documentation-Images/ManageHardware.png" width="700" height = "385">
+<img src="Documentation-Images/Settings.png" width="700" height = "385">
 </p>
 
 - Edit these settings to fit your Onshape assembly and robot preferences. All units are in millimeters.
