@@ -16,10 +16,25 @@
     - If you've added your own inverse kinematics you may have errors appear at this step that you will have to resolve before proceeding.
 - Once the server is running, go to localhost:8080 in a web browser.
 - Go to Manage Hardware Interfaces and turn on the interface labelled "VST-Checkpoints".
+
+<p align="center">
+<img src="Documentation-Images/ManageHardware.png" width="700" height = "385">
+</p>
+
 - Restart the server by going to Terminal, entering ctrl+c, and running `node server` again.
 - Return to localhost:8080. You should see a new object named "checkpoint" in the Object Configuration tab. You will need to attach an Image Target to this object. Follow the instructions at [spatialtoolbox.vuforia.com/docs/tutorials/attaching-targets-to-objects](spatialtoolbox.vuforia.com/docs/tutorials/attaching-targets-to-objects) to do this.
+
+<p align="center">
+<img src="Documentation-Images/ImageTarget.png" width="700" height = "385">
+</p>
+
 - Once you have added an image target, go to Manage Hardware Interfaces and click the cog wheel next to the VST-Checkpoints interface, which should be turned on.
     - If you do not see a cog wheel, try restarting the server.
+
+<p align="center">
+<img src="Documentation-Images/ManageHardware.png" width="700" height = "385">
+</p>
+
 - Edit these settings to fit your Onshape assembly and robot preferences. All units are in millimeters.
 - Restart the server to apply the setting changes.
 - Once the server starts up, you can now open the app on your phone to start using the motion tool!
