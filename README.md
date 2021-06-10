@@ -39,6 +39,11 @@
 - Restart the server to apply the setting changes.
 - Once the server starts up, you can now open the app on your phone to start using the motion tool!
 - Point your phone at the image target to load the interface. **Note:** The interface takes a few seconds to load. Wait for the buttons in the top left corner to be the same color before placing a checkpoint.
+
+<p align="center">
+<img src="Documentation-Images/InterfaceLoaded.png" width="700" height = "302">
+</p>
+
 - Place checkpoints by tapping the screen at the location you want to add a checkpoint. You can drag the checkpoint to reposition it within the ground plane. You can get more options to move the checkpoint around, such as altering the height, by holding the checkpoint.
 - As you place checkpoints, they should appear in the specified Onshape assembly. **Note:** Adding checkpoints to the Onshape assembly takes a second or two. If you place checkpoints very quickly, the Onshape assembly might miss a checkpoint's position.
 - Editing checkpoints in the Spatial Toolbox will also edit the specified checkpoint's position in Onshape.
